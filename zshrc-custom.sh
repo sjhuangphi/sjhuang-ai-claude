@@ -44,9 +44,16 @@ sync-all() {
   echo "✅ All done"
 }
 
-# Pull latest doc from remote (run on other machines before working)
+# Pull latest doc from remote
 doc-pull() {
   cd ~/Desktop/doc && git pull
+}
+
+# Commit and push doc
+doc-push() {
+  cd ~/Desktop/doc && git add . && \
+  git diff --cached --quiet && echo "(nothing to commit)" || \
+  git commit -m "${1:-update docs}" && git push
 }
 
 # ── Aliases ───────────────────────────────────────────────────
