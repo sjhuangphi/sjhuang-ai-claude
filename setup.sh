@@ -40,11 +40,15 @@ else
   echo "  ✓ zshrc-custom.sh already sourced in ~/.zshrc"
 fi
 
-# ── 4. Desktop/doc 目錄結構 ───────────────────────────────────
-for dir in logs specs context skills-spec; do
-  mkdir -p "$HOME/Desktop/doc/$dir"
-done
-echo "  ✓ ~/Desktop/doc/ directory structure created"
+# ── 4. Clone doc repo ─────────────────────────────────────────
+if [ ! -d "$HOME/Desktop/doc/.git" ]; then
+  echo "  Cloning doc repo..."
+  git clone git@github.com:sjhuangphi/claude-doc.git "$HOME/Desktop/doc" 2>/dev/null \
+    && echo "  ✓ ~/Desktop/doc cloned from GitHub" \
+    || echo "  ⚠️  Failed to clone doc repo — run: git clone git@github.com:sjhuangphi/claude-doc.git ~/Desktop/doc"
+else
+  echo "  ✓ ~/Desktop/doc already exists"
+fi
 
 # ── 5. Python 依賴 ───────────────────────────────────────────
 if command -v pip3 &>/dev/null; then

@@ -21,18 +21,32 @@ killport() {
   kill -9 "${pids[@]}" && echo "Killed ${#pids[@]} process(es) on port $1"
 }
 
-# Notion sync + dotfiles commit + push
+# Notion sync + dotfiles commit + doc commit + push
 sync-all() {
   cp ~/dotfiles/CHANGELOG.md ~/Desktop/doc/CHANGELOG.md
+
   echo "🔄 Syncing to Notion..."
   python3 ~/notion-sync/sync_to_notion.py || { echo "❌ Notion sync failed"; return 1; }
+
   echo ""
   echo "📦 Committing dotfiles..."
   cd ~/dotfiles && git add . && \
   git diff --cached --quiet && echo "  (nothing to commit)" || \
   git commit -m "${1:-sync: update skills and docs}" && git push
+
+  echo ""
+  echo "📄 Committing doc..."
+  cd ~/Desktop/doc && git add . && \
+  git diff --cached --quiet && echo "  (nothing to commit)" || \
+  git commit -m "${1:-sync: update docs}" && git push
+
   echo ""
   echo "✅ All done"
+}
+
+# Pull latest doc from remote (run on other machines before working)
+doc-pull() {
+  cd ~/Desktop/doc && git pull
 }
 
 # ── Aliases ───────────────────────────────────────────────────
