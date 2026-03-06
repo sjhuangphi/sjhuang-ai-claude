@@ -2,14 +2,18 @@
 # Get it from: https://www.notion.so/my-integrations
 notion_token: "ntn_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
+# Parent page ID — used to auto-create missing databases
+# Get from the page URL: notion.so/<PAGE_ID>
+parent_page_id: "31b1500a-4b9d-802a-94bf-ffefbb879371"
+
 # Notion Database IDs
-# Get from the database URL: notion.so/workspace/<DATABASE_ID>?v=...
+# Leave empty — sync will auto-find or create them
 databases:
-  claude_skills: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  knowledge_base: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  specs: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  context: ""   # 建立 "Context" DB 後貼上 ID
-  docs: ""      # 建立 "Docs" DB 後貼上 ID
+  claude_skills: ""
+  knowledge_base: ""
+  specs: ""
+  context: ""
+  docs: ""
 
 # Source mappings
 sources:

@@ -1,0 +1,23 @@
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/sjhuang.phi
+Host codelab.tcg.local
+    HostKeyAlgorithms +ssh-rsa
+    PubkeyAcceptedKeyTypes +ssh-rsa
+Host gitlab.tcg.com
+    HostKeyAlgorithms +ssh-rsa
+    PubkeyAcceptedKeyTypes +ssh-rsa
+Host 10.*
+	HostKeyAlgorithms +ssh-rsa,ssh-dss 
+Host 10.8.90.* 10.8.95.*
+    HostkeyAlgorithms +ssh-rsa
+    PubkeyAcceptedAlgorithms +ssh-rsa
+    IdentitiesOnly yes
+    IdentityFile ~/.ssh/id_rsa
+
+Host 10.80.*
+    AddKeysToAgent yes
+    UseKeychain yes
+    User root
+    IdentityFile ~/.ssh/dev.root.tc168
