@@ -36,7 +36,7 @@ sync-all() {
 
   echo ""
   echo "📄 Committing doc..."
-  cd ~/Desktop/doc && git add . && \
+  cd ~/Desktop/doc && git add -A && \
   git diff --cached --quiet && echo "  (nothing to commit)" || \
   git commit -m "${1:-sync: update docs}" && git push
 
@@ -49,9 +49,9 @@ doc-pull() {
   cd ~/Desktop/doc && git pull
 }
 
-# Commit and push doc
+# Commit and push doc (includes additions, modifications, and deletions)
 doc-push() {
-  cd ~/Desktop/doc && git add . && \
+  cd ~/Desktop/doc && git add -A && \
   git diff --cached --quiet && echo "(nothing to commit)" || \
   git commit -m "${1:-update docs}" && git push
 }
