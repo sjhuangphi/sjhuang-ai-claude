@@ -58,6 +58,21 @@ class Notion:
         )
         return r.status_code == 200
 
+    def search_database(self, title: str) -> str | None:
+        """Search workspace for a database by title, return its ID or None."""
+        data = self._post("/search", {
+            "query": title,
+            "filter": {"value": "database", "property": "object"},
+            "page_size": 10,
+        })
+        for db in data.get("results", []):
+            db_title = "".join(
+                t.get("plain_text", "") for t in db.get("title", [])
+            )
+            if db_title == title and not db.get("archived", False):
+                return db["id"]
+        return None
+
     def create_database(self, parent_page_id: str, title: str) -> str:
         """Create a new database with standard sync schema, return its ID."""
         result = self._post("/databases", {
@@ -340,11 +355,16 @@ def main():
         for key, label in db_labels.items():
             db_id = dbs.get(key, "").strip()
             if not db_id or not notion.db_accessible(db_id):
-                new_id = notion.create_database(parent_page_id, label)
+                # Search workspace for existing DB with same name
+                found_id = notion.search_database(label)
+                if found_id and notion.db_accessible(found_id):
+                    new_id = found_id
+                    print(f"🔍 Found {label} DB: {new_id}")
+                else:
+                    new_id = notion.create_database(parent_page_id, label)
+                    print(f"🔨 Created {label} DB: {new_id}")
                 dbs[key] = new_id
                 config["databases"][key] = new_id
-                action = "Rebuilt" if db_id else "Created"
-                print(f"🔨 {action} {label} DB: {new_id}")
                 config_changed = True
         if config_changed:
             with open(config_path, "w") as f:
