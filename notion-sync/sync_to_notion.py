@@ -220,6 +220,15 @@ def sync_directory(notion: Notion, database_id: str, source_dir: Path, label: st
 # Entry point
 # ---------------------------------------------------------------------------
 
+def sync_file_single(notion: Notion, database_id: str, file_path: Path, dry_run: bool):
+    """Sync a single root-level file (not inside a subdirectory)."""
+    if not file_path.exists():
+        print(f"  ⚠️  Not found, skipping: {file_path}")
+        return
+    category = file_path.parent.name
+    sync_file(notion, database_id, file_path, category, dry_run)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Sync markdown files to Notion")
     parser.add_argument("--dry-run", action="store_true", help="Preview without writing")
@@ -235,22 +244,48 @@ def main():
         config = yaml.safe_load(f)
 
     notion = Notion(token=config["notion_token"])
+    src = config["sources"]
+    dbs = config["databases"]
+    dry = args.dry_run
 
-    sync_directory(
-        notion,
-        database_id=config["databases"]["claude_skills"],
-        source_dir=Path(config["sources"]["claude_commands"]).expanduser(),
-        label="Claude Skills",
-        dry_run=args.dry_run,
-    )
+    # ── Claude Skills ──────────────────────────────────────────────
+    sync_directory(notion, dbs["claude_skills"],
+                   Path(src["claude_skills"]).expanduser(), "Claude Skills", dry)
 
-    sync_directory(
-        notion,
-        database_id=config["databases"]["knowledge_base"],
-        source_dir=Path(config["sources"]["knowledge_base"]).expanduser(),
-        label="Knowledge Base",
-        dry_run=args.dry_run,
+    # ── Knowledge Base ─────────────────────────────────────────────
+    kb_count = sum(
+        len(list(Path(d).expanduser().rglob("*.md")))
+        for d in src.get("knowledge_base_dirs", [])
+        if Path(d).expanduser().exists()
+    ) + len(src.get("knowledge_base_files", []))
+    print(f"\n{'[dry-run] ' if dry else ''}📂 Knowledge Base  ({kb_count} files)")
+
+    for d in src.get("knowledge_base_dirs", []):
+        p = Path(d).expanduser()
+        if p.exists():
+            for md_file in sorted(p.rglob("*.md")):
+                rel = md_file.relative_to(p)
+                category = str(rel.parent) if str(rel.parent) != "." else p.name
+                sync_file(notion, dbs["knowledge_base"], md_file, category, dry)
+
+    for f in src.get("knowledge_base_files", []):
+        sync_file_single(notion, dbs["knowledge_base"], Path(f).expanduser(), dry)
+
+    # ── Specs & Context ────────────────────────────────────────────
+    specs_count = sum(
+        len(list(Path(d).expanduser().rglob("*.md")))
+        for d in src.get("specs_dirs", [])
+        if Path(d).expanduser().exists()
     )
+    print(f"\n{'[dry-run] ' if dry else ''}📂 Specs & Context  ({specs_count} files)")
+
+    for d in src.get("specs_dirs", []):
+        p = Path(d).expanduser()
+        if p.exists():
+            for md_file in sorted(p.rglob("*.md")):
+                rel = md_file.relative_to(p)
+                category = p.name  # "specs" or "context"
+                sync_file(notion, dbs["specs"], md_file, category, dry)
 
     prefix = "[dry-run] " if args.dry_run else ""
     print(f"\n{prefix}✅ Done")
