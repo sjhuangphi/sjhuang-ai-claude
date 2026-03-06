@@ -50,6 +50,28 @@ class Notion:
         r.raise_for_status()
         return r.json()
 
+    def db_accessible(self, database_id: str) -> bool:
+        """Check if a database is accessible (query works)."""
+        r = requests.post(
+            f"{self.base}/databases/{database_id}/query",
+            headers=self.headers, json={"page_size": 1},
+        )
+        return r.status_code == 200
+
+    def create_database(self, parent_page_id: str, title: str) -> str:
+        """Create a new database with standard sync schema, return its ID."""
+        result = self._post("/databases", {
+            "parent": {"type": "page_id", "page_id": parent_page_id},
+            "title": [{"type": "text", "text": {"content": title}}],
+            "properties": {
+                "Name": {"title": {}},
+                "Category": {"select": {}},
+                "FilePath": {"rich_text": {}},
+                "LastSynced": {"date": {}},
+            },
+        })
+        return result["id"]
+
     def query_database(self, database_id: str, filter_body: dict = None) -> list:
         body = filter_body or {}
         data = self._post(f"/databases/{database_id}/query", body)
@@ -303,6 +325,30 @@ def main():
     src = config["sources"]
     dbs = config["databases"]
     dry = args.dry_run
+    parent_page_id = config.get("parent_page_id", "")
+
+    # ── Auto-rebuild missing databases ────────────────────────────
+    if parent_page_id and not dry:
+        db_labels = {
+            "claude_skills": "Claude Skills",
+            "knowledge_base": "Knowledge Base",
+            "specs": "Specs",
+            "context": "Context",
+            "docs": "Docs",
+        }
+        config_changed = False
+        for key, label in db_labels.items():
+            db_id = dbs.get(key, "").strip()
+            if not db_id or not notion.db_accessible(db_id):
+                new_id = notion.create_database(parent_page_id, label)
+                dbs[key] = new_id
+                config["databases"][key] = new_id
+                action = "Rebuilt" if db_id else "Created"
+                print(f"🔨 {action} {label} DB: {new_id}")
+                config_changed = True
+        if config_changed:
+            with open(config_path, "w") as f:
+                yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
 
     # ── Claude Skills ──────────────────────────────────────────────
     sync_directory(notion, dbs["claude_skills"],
