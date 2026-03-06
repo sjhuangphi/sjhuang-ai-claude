@@ -1,2 +1,5 @@
 # Notion token - never commit
 notion-sync/config.yaml
+
+# macOS
+.DS_Store
