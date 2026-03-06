@@ -69,6 +69,23 @@
 
 ---
 
+## Skills-Spec 規範（skills-spec/）
+
+放置 Claude skill 的整合參考文件，供執行對接任務時讀取。
+
+- 命名：`skills-<類別>-<名稱>.md`（例如 `skills-sms-otp-expert.md`）
+- 內容：Provider 概要、API 端點、認證方式、BO 參數、簽名規則、快速 debug 指令
+- **執行對接任務前，Claude 必須先讀取對應的 skills-spec 文件**
+
+### 現有 Skills-Spec
+
+| 檔案 | Provider | 說明 |
+|------|----------|------|
+| `skills-sms-otp-expert.md` | OTP Expert（ID 190） | X-API-KEY 認證，支援全球 SMS/WhatsApp |
+| `skills-sms-tsms.md` | TSMS（ID 191） | HMAC-SHA256 簽名，支援越南 SMS |
+
+---
+
 ## 工具與 Alias
 
 | Alias | 說明 |
@@ -84,7 +101,8 @@
 | `~/.claude/commands/` | Claude Skills（slash commands） |
 | `~/Desktop/doc/logs/` | 工作紀錄（同步到 Notion） |
 | `~/Desktop/doc/specs/` | SOP 流程文件（同步到 Notion） |
+| `~/Desktop/doc/skills-spec/` | Skill 整合參考文件（同步到 Notion） |
 | `~/Desktop/doc/context/` | 專案背景知識（同步到 Notion） |
 | `~/Desktop/doc/alias-cheatsheet.md` | 所有 alias 速查表 |
 | `~/notion-sync/` | Notion 同步工具 |
-| `~/notion-sync/SETUP.md` | 新機器設定 Spec |
+| `~/dotfiles/CHANGELOG.md` | 主異動紀錄（隨 dotfiles commit） |
