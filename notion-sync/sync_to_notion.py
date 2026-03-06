@@ -95,6 +95,49 @@ def _safe_lang(lang: str) -> str:
     return lang if lang in NOTION_SUPPORTED_LANGS else "plain text"
 
 
+def _parse_table_cells(line: str) -> list:
+    """Parse a markdown table row into a list of cell strings."""
+    return [c.strip() for c in line.strip().strip("|").split("|")]
+
+
+def _is_table_separator(cells: list) -> bool:
+    """Check if row is a markdown table separator (|---|---|)."""
+    return all(c.strip("-").strip(":").strip() == "" for c in cells if c.strip())
+
+
+def _markdown_table_to_notion(table_lines: list) -> dict | None:
+    """Convert markdown table lines to a Notion table block with row children."""
+    rows = [_parse_table_cells(line) for line in table_lines]
+    data_rows = [r for r in rows if not _is_table_separator(r)]
+    if not data_rows:
+        return None
+
+    table_width = max(len(r) for r in data_rows)
+
+    notion_rows = []
+    for row in data_rows:
+        padded = row + [""] * (table_width - len(row))
+        notion_rows.append({
+            "type": "table_row",
+            "table_row": {
+                "cells": [
+                    [{"type": "text", "text": {"content": cell[:NOTION_TEXT_LIMIT]}}]
+                    for cell in padded
+                ]
+            },
+        })
+
+    return {
+        "type": "table",
+        "table": {
+            "table_width": table_width,
+            "has_column_header": True,
+            "has_row_header": False,
+            "children": notion_rows,
+        },
+    }
+
+
 def parse_markdown_to_blocks(content: str) -> list:
     blocks = []
     lines = content.split("\n")
@@ -135,6 +178,15 @@ def parse_markdown_to_blocks(content: str) -> list:
             })
         elif line.startswith("> "):
             blocks.append({"type": "quote", "quote": {"rich_text": _rich_text(line[2:])}})
+        elif line.strip().startswith("|"):
+            # Markdown table — collect all consecutive table lines
+            table_lines = [line]
+            while i + 1 < len(lines) and lines[i + 1].strip().startswith("|"):
+                i += 1
+                table_lines.append(lines[i])
+            table_block = _markdown_table_to_notion(table_lines)
+            if table_block:
+                blocks.append(table_block)
         elif line.strip():
             blocks.append({"type": "paragraph", "paragraph": {"rich_text": _rich_text(line)}})
 
@@ -177,7 +229,11 @@ def sync_file(notion: Notion, database_id: str, file_path: Path, category: str, 
     properties = build_properties(title, category, file_path)
     blocks = parse_markdown_to_blocks(content)
 
-    page_id = find_page(notion, database_id, title)
+    try:
+        page_id = find_page(notion, database_id, title)
+    except requests.HTTPError as e:
+        print(f"  ✗ Failed [{title}]: {e}")
+        return
 
     if dry_run:
         action = "UPDATE" if page_id else "CREATE"
@@ -253,39 +309,58 @@ def main():
                    Path(src["claude_skills"]).expanduser(), "Claude Skills", dry)
 
     # ── Knowledge Base ─────────────────────────────────────────────
-    kb_count = sum(
-        len(list(Path(d).expanduser().rglob("*.md")))
-        for d in src.get("knowledge_base_dirs", [])
-        if Path(d).expanduser().exists()
-    ) + len(src.get("knowledge_base_files", []))
-    print(f"\n{'[dry-run] ' if dry else ''}📂 Knowledge Base  ({kb_count} files)")
+    kb_db = dbs.get("knowledge_base", "").strip()
+    if not kb_db:
+        print("\n⚠️  Knowledge Base: no database ID — skipping")
+    else:
+        kb_count = sum(
+            len(list(Path(d).expanduser().rglob("*.md")))
+            for d in src.get("knowledge_base_dirs", [])
+            if Path(d).expanduser().exists()
+        )
+        print(f"\n{'[dry-run] ' if dry else ''}📂 Knowledge Base  ({kb_count} files)")
 
-    for d in src.get("knowledge_base_dirs", []):
-        p = Path(d).expanduser()
-        if p.exists():
-            for md_file in sorted(p.rglob("*.md")):
-                rel = md_file.relative_to(p)
-                category = str(rel.parent) if str(rel.parent) != "." else p.name
-                sync_file(notion, dbs["knowledge_base"], md_file, category, dry)
+        for d in src.get("knowledge_base_dirs", []):
+            p = Path(d).expanduser()
+            if p.exists():
+                for md_file in sorted(p.rglob("*.md")):
+                    rel = md_file.relative_to(p)
+                    category = str(rel.parent) if str(rel.parent) != "." else p.name
+                    sync_file(notion, kb_db, md_file, category, dry)
 
-    for f in src.get("knowledge_base_files", []):
-        sync_file_single(notion, dbs["knowledge_base"], Path(f).expanduser(), dry)
+    # ── Specs ──────────────────────────────────────────────────────
+    def _sync_dirs(db_key: str, dirs_key: str, label: str):
+        db_id = dbs.get(db_key, "").strip()
+        dirs = src.get(dirs_key, [])
+        if not dirs:
+            return
+        if not db_id:
+            print(f"\n⚠️  {label}: no database ID — skipping (add {db_key} to config.yaml)")
+            return
+        count = sum(
+            len(list(Path(d).expanduser().rglob("*.md")))
+            for d in dirs if Path(d).expanduser().exists()
+        )
+        print(f"\n{'[dry-run] ' if dry else ''}📂 {label}  ({count} files)")
+        for d in dirs:
+            p = Path(d).expanduser()
+            if p.exists():
+                for md_file in sorted(p.rglob("*.md")):
+                    sync_file(notion, db_id, md_file, p.name, dry)
 
-    # ── Specs & Context ────────────────────────────────────────────
-    specs_count = sum(
-        len(list(Path(d).expanduser().rglob("*.md")))
-        for d in src.get("specs_dirs", [])
-        if Path(d).expanduser().exists()
-    )
-    print(f"\n{'[dry-run] ' if dry else ''}📂 Specs & Context  ({specs_count} files)")
+    _sync_dirs("specs", "specs_dirs", "Specs")
+    _sync_dirs("context", "context_dirs", "Context")
 
-    for d in src.get("specs_dirs", []):
-        p = Path(d).expanduser()
-        if p.exists():
-            for md_file in sorted(p.rglob("*.md")):
-                rel = md_file.relative_to(p)
-                category = p.name  # "specs" or "context"
-                sync_file(notion, dbs["specs"], md_file, category, dry)
+    # ── Docs ───────────────────────────────────────────────────────
+    docs_db = dbs.get("docs", "").strip()
+    docs_files = src.get("docs_files", [])
+    if docs_files:
+        if docs_db:
+            print(f"\n{'[dry-run] ' if dry else ''}📂 Docs  ({len(docs_files)} files)")
+            for f in docs_files:
+                sync_file_single(notion, docs_db, Path(f).expanduser(), dry)
+        else:
+            print(f"\n⚠️  Docs: no database ID — skipping (add docs to config.yaml)")
 
     prefix = "[dry-run] " if args.dry_run else ""
     print(f"\n{prefix}✅ Done")

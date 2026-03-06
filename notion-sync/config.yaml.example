@@ -1,14 +1,35 @@
 # Notion Integration Token
 # Get it from: https://www.notion.so/my-integrations
-notion_token: "secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+notion_token: "ntn_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 # Notion Database IDs
 # Get from the database URL: notion.so/workspace/<DATABASE_ID>?v=...
 databases:
   claude_skills: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
   knowledge_base: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  specs: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  context: ""   # 建立 "Context" DB 後貼上 ID
+  docs: ""      # 建立 "Docs" DB 後貼上 ID
 
-# Source directories to sync
+# Source mappings
 sources:
-  claude_commands: "~/.claude/commands"
-  knowledge_base: "~/knowledge-base"
+  # Claude Skills → claude_skills DB
+  claude_skills: "~/.claude/commands"
+
+  # Knowledge Base → knowledge_base DB（logs, skills-spec）
+  knowledge_base_dirs:
+    - "~/Desktop/doc/logs"
+    - "~/Desktop/doc/skills-spec"
+
+  # Specs → specs DB
+  specs_dirs:
+    - "~/Desktop/doc/specs"
+
+  # Context → context DB
+  context_dirs:
+    - "~/Desktop/doc/context"
+
+  # Docs → docs DB（CHANGELOG, alias-cheatsheet）
+  docs_files:
+    - "~/Desktop/doc/alias-cheatsheet.md"
+    - "~/Desktop/doc/CHANGELOG.md"
