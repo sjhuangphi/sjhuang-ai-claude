@@ -73,8 +73,26 @@ class Notion:
 # Markdown → Notion block converter
 # ---------------------------------------------------------------------------
 
+NOTION_TEXT_LIMIT = 1990  # Notion rich_text max is 2000 chars
+
 def _rich_text(text: str) -> list:
-    return [{"type": "text", "text": {"content": text}}]
+    return [{"type": "text", "text": {"content": text[:NOTION_TEXT_LIMIT]}}]
+
+NOTION_SUPPORTED_LANGS = {
+    "abap","arduino","bash","basic","c","clojure","coffeescript","c++","c#",
+    "css","dart","diff","docker","elixir","elm","erlang","flow","fortran",
+    "f#","gherkin","glsl","go","graphql","groovy","haskell","html","java",
+    "javascript","json","julia","kotlin","latex","less","lisp","livescript",
+    "lua","makefile","markdown","markup","mermaid","nix","objective-c","ocaml",
+    "pascal","perl","php","plain text","powershell","prolog","protobuf","python",
+    "r","reason","ruby","rust","sass","scala","scheme","scss","shell","sql",
+    "swift","toml","typescript","vb.net","verilog","vhdl","visual basic",
+    "webassembly","xml","yaml","java/c/c++/c#"
+}
+
+def _safe_lang(lang: str) -> str:
+    lang = lang.lower().strip()
+    return lang if lang in NOTION_SUPPORTED_LANGS else "plain text"
 
 
 def parse_markdown_to_blocks(content: str) -> list:
@@ -87,7 +105,7 @@ def parse_markdown_to_blocks(content: str) -> list:
 
         # Fenced code block
         if line.startswith("```"):
-            lang = line[3:].strip() or "plain text"
+            lang = _safe_lang(line[3:].strip() or "plain text")
             code_lines = []
             i += 1
             while i < len(lines) and not lines[i].startswith("```"):
