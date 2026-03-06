@@ -1,0 +1,14 @@
+# Notion Integration Token
+# Get it from: https://www.notion.so/my-integrations
+notion_token: "secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Notion Database IDs
+# Get from the database URL: notion.so/workspace/<DATABASE_ID>?v=...
+databases:
+  claude_skills: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  knowledge_base: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Source directories to sync
+sources:
+  claude_commands: "~/.claude/commands"
+  knowledge_base: "~/knowledge-base"
