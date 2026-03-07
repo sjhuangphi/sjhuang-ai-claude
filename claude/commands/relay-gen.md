@@ -87,23 +87,23 @@ SELECT API_CODE FROM TCG_GW.SYS_SETT_RELAY
 若無法對應 subsystem，需先建立 `TCG_SUBSYSTEM` 記錄再繼續。
 
 ### Step 5 — 生成 SQL Patch
-- 路徑：`20.patches/<patch-folder>/<version>/TCG_GW_SYS-SETT-RELAY-<patch-folder>-<YYYYMMDD>.sql`
-- 檔頭只留 2 行 comment，之後每筆之間空一行，無分隔線
+- 路徑：`20.patches/<patch-folder>/TCG_GW_SYS-SETT-RELAY-<patch-folder>-<description>-<version>.sql`
+  - 不建 version 子目錄，檔案直接放在 `20.patches/<patch-folder>/` 下
+  - `<description>`：從本次新增的 api_code 自動推斷，取主要功能關鍵字轉 kebab-case
+    - 例：`MCSFE_getPromoCode`, `MCSFE_claimPromoCode` → `promo-code`
+    - 例：`UCSFE_submitVerificationMaterials` → `verification`
+    - 混合系統無明顯主題則用 `relay`
+- 每筆之間空一行，無分隔線，無 header comment，無 COMMIT
 - AUTO-GENERATED 的那筆在前面加一行 `-- <api_code> [AUTO-GENERATED NAME]`
 - 全部 **單行**，不換行；`SYS_SETTING_MODULE` DELETE 用小寫 `and`
 
 ```sql
--- <patch-folder> <version> | <YYYY-MM-DD>
--- <api_code1>, <api_code2>, ...
-
 DELETE FROM TCG_GW.SYS_SETT_RELAY WHERE API_CODE = '<api_code>';
 DELETE FROM TCG_GW.SYS_SETTING_MODULE WHERE MODULE_ID = '<MODULE>' and FUNCTION_ID = TCG_GW.get_func_id('relay/<api_code>', '<METHOD>');
 DELETE FROM TCG_GW.SYS_SETTING_FUNCTION WHERE URI = 'relay/<api_code>' AND HTTP_METHOD = '<METHOD>';
 INSERT INTO TCG_GW.SYS_SETT_RELAY(IDX, API_CODE, API_LOC, SUBSYSTEM_ID, REQUIRE_LOGIN) VALUES (TCG_GW.SETT_RELAY_SEQ.nextval, '<api_code>', '<api_loc>', <sys_id>, <req_login>);
 INSERT INTO TCG_GW.SYS_SETTING_FUNCTION (FUNCTION_ID, URI, HTTP_METHOD, FUNCTION_NAME, COMMENTS) VALUES (TCG_GW.SETT_FUNC_ID.nextval, 'relay/<api_code>', '<METHOD>', '<desc>', null);
 INSERT INTO TCG_GW.SYS_SETTING_MODULE(IDX, MODULE_ID, FUNCTION_ID, COMMENTS) VALUES (TCG_GW.SETT_MODU_MAPP_SEQ.nextval, '<MODULE>', TCG_GW.get_func_id('relay/<api_code>', '<METHOD>'), '');
-
-COMMIT;
 ```
 
 ### Step 6 — 推送到 Dev DB
